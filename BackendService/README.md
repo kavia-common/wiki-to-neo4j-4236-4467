@@ -21,7 +21,7 @@ The BackendService is organized into several layers:
   - src.services.langchain_pipeline.ExtractionPipeline implements a deterministic heuristic extractor for entities and relationships, an embedding step, and graph upsert orchestration.
   - src.services.embedding_provider.EmbeddingProvider provides deterministic stub embeddings by default, or uses OpenAI if OPENAI_API_KEY is configured.
 - Neo4j client:
-  - src.services.neo4j_client.Neo4jClient establishes a connection when NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD are set. If not configured or connection fails, it logs and performs no-op upserts so the pipeline can still complete.
+  - src.services.neo4j_client.Neo4jClient initializes from NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD and performs parameterized Cypher MERGE upserts for nodes and relationships. It persists embeddings on nodes and includes basic retry logic. If Neo4j is not configured, it logs and no-ops so the pipeline can still complete.
 
 ## Setup and Run
 
@@ -99,6 +99,16 @@ Limitations:
 - The JobStore is in-memory, so jobs and results do not persist across restarts and are not shared across instances.
 - BackgroundTasks execute in-process with the web worker; for production, consider a durable queue and persistent store.
 - If Neo4j is not configured, upserts are skipped but the pipeline still completes successfully with logged no-op operations.
+
+## Neo4j Upsert Details
+
+- Nodes: MERGE on (Entity {id}) and SET properties from the input payload. The 'label' provided by extraction is stored as a node property (n.label) and a base label :Entity is always present.
+- Relationships: Endpoints are MERGEd by id. A default relationship type RELATED_TO is used to create the relationship (due to Cypher limitations of parameterizing types). The extracted relationship type is stored as a property r.type and additional properties are merged via SET r += props.
+- Embeddings: Stored per node under property 'embedding'. You can update or add embeddings using:
+  - Neo4jClient.persist_embeddings(entity_id, vector)
+  - Or batch via pipeline which calls Neo4jClient.upsert_embeddings internally.
+
+The client includes retry logic for transient errors with exponential backoff and falls back to no-op mode if Neo4j is not configured.
 
 ## Curl Examples
 

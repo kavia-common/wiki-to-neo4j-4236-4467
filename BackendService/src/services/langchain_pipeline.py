@@ -59,7 +59,7 @@ class ExtractionPipeline:
         embeddings: List[Dict[str, Any]],
     ) -> None:
         """Upsert entities, relationships, and embeddings into Neo4j."""
-        self.graph.upsert_entities(entities)
-        self.graph.upsert_relationships(relationships)
+        # Prefer the combined upsert for atomic batches; retains backward-compat calls
+        self.graph.upsert_entities_and_relationships(entities, relationships)
         # embeddings are often stored in a vector index or as properties
         self.graph.upsert_embeddings(embeddings)
