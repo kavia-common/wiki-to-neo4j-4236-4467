@@ -55,6 +55,8 @@ def custom_openapi():
     )
     # Register HTTP bearer auth scheme
     register_security_scheme(openapi_schema)
+    # Ensure top-level security requirement aligns with spec
+    openapi_schema["security"] = [{"bearerAuth": []}]
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
