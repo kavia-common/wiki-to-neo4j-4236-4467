@@ -44,7 +44,10 @@ class Neo4jClient:
             except Exception as conn_err:
                 logger.warning(f"Neo4j connectivity check failed: {conn_err}. Will retry on demand.")
         except Exception as e:
-            logger.warning(f"Neo4j driver initialization failed: {e}; operating in no-op mode")
+            logger.warning(
+                "Neo4j driver initialization failed; operating in no-op mode. "
+                f"uri={self.settings.NEO4J_URI!r} user={self.settings.NEO4J_USER!r} error={e}"
+            )
             self._driver = None
             self._configured = False
 
@@ -186,3 +189,26 @@ class Neo4jClient:
             if not eid:
                 continue
             self.persist_embeddings(eid, vec)
+
+    # PUBLIC_INTERFACE
+    def ping(self) -> tuple[bool, Optional[str]]:
+        """
+        PUBLIC_INTERFACE
+        Check Neo4j driver connectivity at runtime.
+
+        Returns:
+            (connected, error_message) where connected is True if connectivity check succeeds,
+            otherwise False with an error message. When the client is not configured, returns (False, reason).
+        """
+        if not self._configured:
+            return False, "Neo4j not configured (missing NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD)"
+        if not self._driver:
+            return False, "Neo4j driver not initialized"
+
+        try:
+            # verify_connectivity() is supported in neo4j v5+
+            self._driver.verify_connectivity()  # type: ignore[union-attr]
+            return True, None
+        except Exception as e:
+            logger.warning("Neo4j ping failed: %s", e)
+            return False, str(e)

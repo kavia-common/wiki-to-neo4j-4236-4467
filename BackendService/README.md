@@ -110,6 +110,52 @@ Limitations:
 
 The client includes retry logic for transient errors with exponential backoff and falls back to no-op mode if Neo4j is not configured.
 
+## Verify Neo4j connectivity
+
+Use this endpoint to verify that the service can reach your Neo4j instance using NEO4J_URI/NEO4J_USER/NEO4J_PASSWORD.
+
+Example:
+```bash
+curl -s "http://localhost:3001/api/v1/status/neo4j"
+# -> {"connected": true, "error": null}
+```
+If connected is false, check your .env values and Neo4j server status/firewall. The error field will include a driver message.
+
+## End-to-end quick verification
+
+1) Start the API:
+```bash
+uvicorn src.api.main:get_app --host 0.0.0.0 --port 3001 --reload
+```
+
+2) Generate a dev token:
+```python
+from src.api.auth import create_access_token
+print(create_access_token("dev-user"))
+```
+Export it:
+```bash
+TOKEN="paste-the-token-here"
+```
+
+3) Submit a job:
+```bash
+curl -s -X POST "http://localhost:3001/api/v1/input/submit" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"input_type":"topic","value":"Python (programming language)"}'
+```
+Capture JOB_ID from the response and poll:
+```bash
+JOB_ID="..."; curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3001/api/v1/status/$JOB_ID"
+```
+When completed, fetch results:
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" "http://localhost:3001/api/v1/result/$JOB_ID"
+```
+
+Note: If Neo4j is not configured, the pipeline still completes but logs [NOOP] for upserts.
+
 ## Curl Examples
 
 All requests must include a valid Authorization header. Replace $TOKEN and $JOB_ID accordingly.

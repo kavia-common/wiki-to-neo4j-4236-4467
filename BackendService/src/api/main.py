@@ -5,6 +5,7 @@ from .routers import input as input_router
 from .routers import status as status_router
 from .routers import result as result_router
 from .routers import error as error_router
+from .routers import neo4j_status as neo4j_status_router
 from .auth import register_security_scheme
 
 # Initialize application with metadata and versioned docs
@@ -42,6 +43,7 @@ app.include_router(input_router.router, prefix=API_PREFIX)
 app.include_router(status_router.router, prefix=API_PREFIX)
 app.include_router(result_router.router, prefix=API_PREFIX)
 app.include_router(error_router.router, prefix=API_PREFIX)
+app.include_router(neo4j_status_router.router, prefix=API_PREFIX)
 
 # Enhance OpenAPI with bearer auth security scheme
 def custom_openapi():
